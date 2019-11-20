@@ -1,0 +1,14 @@
+# Copy this configuration file to config.yml and edit it.
+
+Qud install folder: C:\Program Files (x86)\Steam\steamapps\common\Caves of Qud
+Discord bot token: XXXXXXXXXXXXXXXXXXXXXXXX.XXXXXX.XXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+decode cog:
+  ignore: [502293569764327444]  # Cryptogull
+  listen channels: [449342897788026882, 571405896597635073]  #character-builds, #build-club
+
+wiki cog:
+  wiki: cavesofqud.gamepedia.com
+  title search limit: 10  # the ?wiki command
+  fulltext search limit: 5  # the ?wikisearch command
+  title dump limit: 50  # for fuzzy matching against all article titles
