@@ -22,9 +22,10 @@ class Wiki(Cog):
 
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.title_limit = config['wiki title search limit']
-        self.fulltext_limit = config['wiki fulltext search limit']
-        self.url = 'https://' + config['wiki'] + '/api.php'
+        self.config = config['wiki cog']
+        self.title_limit = self.config['title search limit']
+        self.fulltext_limit = self.config['fulltext search limit']
+        self.url = 'https://' + self.config['wiki'] + '/api.php'
         self.all_titles = {}  # mapping of titles to pageids, for conversion to URLs by API
         self.all_titles_stamp = 0.0  # after self.all_titles is filled, this will be its timestamp
 
@@ -60,7 +61,7 @@ class Wiki(Cog):
                       'list': 'allpages',
                       'apfrom': apfrom,
                       'apnamespace': namespace,
-                      'aplimit': 5000}  # TODO: add to config
+                      'aplimit': self.config['title dump limit']}
             async with http_session.get(url=self.url, params=params) as reply:
                 response = await reply.json()
             new_items = response['query']['allpages']
@@ -77,15 +78,15 @@ class Wiki(Cog):
 
     async def refresh_titles_cache(self):
         """Helper function to get, or refresh, all relevant page titles for our custom search."""
-        # TODO: put cache time limit in config
         # use time.monotonic because we don't actually care what time it is, only that it ticks,
         # and can't go backwards due to time zone change/daylight savings.
-        if self.all_titles != {} and time.monotonic() - self.all_titles_stamp < 900:
-            # we have cached titles, and they're less than 15 minutes old
+        time_limit = self.config['title cache time limit']
+        if self.all_titles != {} and (time.monotonic() - self.all_titles_stamp) < time_limit:
+            # we have cached titles, and their age is less than the cache time limit
             return
         # else, we need to fetch new titles and update timestamp
         new_titles = {}
-        namespaces = [0, 14]  # Main, Category  TODO: add to config
+        namespaces = self.config['search namespaces']
         for namespace in namespaces:
             new_titles.update(await self.read_titles(namespace))
         self.all_titles = new_titles
@@ -108,8 +109,8 @@ class Wiki(Cog):
                     functools.partial(process.extractBests,
                                       query,
                                       self.all_titles.keys(),
-                                      score_cutoff=75,
-                                      limit=10))  # TODO: read from config
+                                      score_cutoff=self.config['fuzzy cutoff'],
+                                      limit=self.config['title search limit']))
             if len(results) == 0:
                 return await ctx.send(f'Sorry, no matches were found for that query.')
             pageids = [self.all_titles[item[0]] for item in results]  # map titles to IDs
@@ -126,14 +127,14 @@ class Wiki(Cog):
     async def wikisearch(self, ctx: Context, *args):
         """Search all articles for the given text.
         Sandbox link for this query:
-        https://cavesofqud.gamepedia.com/Special:ApiSandbox#action=query&format=json&list=search&srsearch=test&srwhat=text&srprop=snippet
+        https://cavesofqud.gamepedia.com/Special:ApiSandbox#action=query&format=json&list=search&srsearch=test&srnamespace=0%7C14&srwhat=text&srprop=snippet
         """
         log.info(f'({ctx.message.channel}) <{ctx.message.author}> {ctx.message.content}')
         params = {'format': 'json',
                   'action': 'query',
                   'list': 'search',
                   'srsearch': ' '.join(args),
-                  'srnamespace': 0,
+                  'srnamespace': '|'.join(self.config['search namespaces']),
                   'srwhat': 'text',
                   'srlimit': self.fulltext_limit,
                   'srprop': 'snippet'}

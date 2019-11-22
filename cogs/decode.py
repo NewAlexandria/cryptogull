@@ -16,12 +16,12 @@ valid_charcode = re.compile(r"(?:^|\s)[AB][A-L][A-Z]{6}(?:[01ABCDEU][0-9A-Z])*")
 class Decode(Cog):
     def __init__(self, bot: Bot):
         self.bot = bot
-        self.config = config
+        self.config = config['decode cog']
 
     @Cog.listener()
     async def on_message(self, message: Message):
         if not isinstance(message.channel, DMChannel) \
-                and message.channel.id not in self.config['channels']:
+                and message.channel.id not in self.config['listen channels']:
             return
 
         if message.author.id in self.config['ignore'] or message.author == self.bot.user:
